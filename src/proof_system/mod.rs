@@ -1,6 +1,5 @@
 use crate::*;
 use crate::timeline_calculator::*;
-use crate::timeline_calculator::mirrortl_generator::{MirrorTlPublic, MirrorTlSecret};
 
 pub struct Statement {
     mtl: MirrorTlPublic,
