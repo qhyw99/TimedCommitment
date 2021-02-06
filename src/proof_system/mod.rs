@@ -42,16 +42,20 @@ impl Secret {
     }
 }
 
-struct MirrorTLProof(ECDDHProof<PedersenGroup>,
-                     ECDDHProof<PedersenGroup>);
+struct MirrorTLProof(
+    // ECDDHProof<PedersenGroup>,
+    // ECDDHProof<PedersenGroup>
+);
 
 struct UniquenessProof {
     p_eq: (ECDDHProof<PedersenGroup>,
            ECDDHProof<PedersenGroup>),
-    p_range: RangeProof,
+    //p_range: (RangeProof,RangeProof)
 }
 
-struct CommitmentEqProof(ECDDHProof<PedersenGroup>);
+struct CommitmentEqProof(
+    // ECDDHProof<PedersenGroup>
+);
 
 pub struct Proofs {
     m: MirrorTLProof,
@@ -60,9 +64,13 @@ pub struct Proofs {
 }
 
 pub fn proof(state: Statement, secret: Secret) -> Proofs {
-    let mp: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
+    let mtl = secret.mtl.as_ref();
+    let r = mtl.1.as_ref();
+    let r_aux = mtl.2.as_ref();
+    let a = mtl.0.as_ref();
+    let u_p_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
         &ECDDHWitness {
-            x: secret.mtl
+            x: r_aux.into()
         },
         &ECDDHStatement {
             g1: PedersenGroup::generator(),
@@ -70,14 +78,28 @@ pub fn proof(state: Statement, secret: Secret) -> Proofs {
             g2: state.b_aux,
             h2: state.b,
         });
-    let m = MirrorTLProof {};
-    let u = UniquenessProof {};
-    let c = CommitmentEqProof {};
+    let u_p_eq_1: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
+        &ECDDHWitness {
+            x: r.into()
+        },
+        &ECDDHStatement {
+            g1: PedersenGroup::generator(),
+            h1: state.b,
+            g2: state.b,
+            h2: state.B,
+        });
+    let m = MirrorTLProof();
+    let u = UniquenessProof {
+        p_eq:(u_p_eq_0,u_p_eq_1),
+        //p_range: RangeProof::prove()
+    };
+    let c = CommitmentEqProof();
     let proofs = Proofs { m, u, c };
     return proofs;
 }
 
-pub fn verify(_p: Proofs) -> bool {
+pub fn verify(proofs: Proofs) -> bool {
+
     let result = true;
     return result;
 }

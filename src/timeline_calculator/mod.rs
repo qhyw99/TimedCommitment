@@ -24,6 +24,11 @@ pub struct MirrorTlSecret {
     r_aux: RSAGroup,
 }
 
+// impl MirrorTlSecret{
+//     fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
+//         return &(&self.a, &self.r, &self.r_aux);
+//     }
+// }
 impl AsRef<(Zphi, RSAGroup, RSAGroup)> for MirrorTlSecret {
     fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
         return &(&self.a, &self.r, &self.r_aux);
