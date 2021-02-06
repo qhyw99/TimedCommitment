@@ -36,7 +36,7 @@ impl MasterTl {
 
         let m_0 = m_1.sqrt();
 
-        let generator = RSAGroup::from(&g);
+        let generator:RSAGroup = RSAGroup::from(g.clone());
         return MasterTl { generator, u_0, u_1, m_0, m_1 };
     }
 }
@@ -59,8 +59,9 @@ pub fn generate_mirror_timeline(mtl: MasterTl) -> (MirrorTlPublic, MirrorTlSecre
         r,
     });
 }
-fn commit(message:BigInt,blind:BigInt) -> (PedersenGroup,BigInt){
-    return PedersenCommitment::create_commitment_with_user_defined_randomness(&message,&blind)
+
+pub fn commit(message: &BigInt, blind: &MirrorTlSecret) -> PedersenGroup {
+    return PedersenCommitment::create_commitment_with_user_defined_randomness(message, blind.r.as_ref());
 }
 
 #[cfg(test)]
