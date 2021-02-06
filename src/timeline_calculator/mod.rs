@@ -20,8 +20,9 @@ pub struct MirrorTlPublic {
 
 pub struct MirrorTlSecret {
     a: ZPhi,
-    r_aux: RSAGroup,
     r: RSAGroup,
+    r_aux: RSAGroup,
+
 }
 
 impl MasterTl {
@@ -36,7 +37,7 @@ impl MasterTl {
 
         let m_0 = m_1.sqrt();
 
-        let generator:RSAGroup = RSAGroup::from(g.clone());
+        let generator: RSAGroup = RSAGroup::from(g.clone());
         return MasterTl { generator, u_0, u_1, m_0, m_1 };
     }
 }
@@ -55,13 +56,23 @@ pub fn generate_mirror_timeline(mtl: MasterTl) -> (MirrorTlPublic, MirrorTlSecre
         r_k1,
     }, MirrorTlSecret {
         a,
-        r_aux,
         r,
+        r_aux,
     });
 }
 
-pub fn commit(message: &BigInt, blind: &MirrorTlSecret) -> PedersenGroup {
-    return PedersenCommitment::create_commitment_with_user_defined_randomness(message, blind.r.as_ref());
+fn pedersen_commit(g_exp: &BigInt, h_exp: &BigInt) -> PedersenGroup {
+    return PedersenCommitment::create_commitment_with_user_defined_randomness(g_exp, h_exp);
+}
+
+pub fn commit_message(message: &BigInt, blind: &MirrorTlSecret, public: &MirrorTlPublic) -> (PedersenGroup, PedersenGroup, PedersenGroup, PedersenGroup) {
+    let one = BigInt::one();
+    let four_element_tuple =
+        (pedersen_commit(message, blind.r.as_ref()),
+         pedersen_commit(public.r_k1.as_ref(), &one),
+         pedersen_commit(blind.r.as_ref(), &one),
+         pedersen_commit(blind.r_aux.as_ref(), &one));
+    return four_element_tuple;
 }
 
 #[cfg(test)]
