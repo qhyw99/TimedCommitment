@@ -5,24 +5,29 @@ use curv::cryptographic_primitives::commitments::traits::Commitment;
 const k: u32 = 50;
 
 pub struct MasterTl {
-    generator: RSAGroup,
-    u_0: RSAGroup,
-    u_1: RSAGroup,
-    m_0: RSAGroup,
-    m_1: RSAGroup,
+    pub generator: RSAGroup,
+    pub u_0: RSAGroup,
+    pub u_1: RSAGroup,
+    pub m_0: RSAGroup,
+    pub m_1: RSAGroup,
 }
 
 pub struct MirrorTlPublic {
-    h: RSAGroup,
-    r_k0: RSAGroup,
-    r_k1: RSAGroup,
+    pub h: RSAGroup,
+    pub r_k0: RSAGroup,
+    pub r_k1: RSAGroup,
 }
 
 pub struct MirrorTlSecret {
     a: ZPhi,
     r: RSAGroup,
     r_aux: RSAGroup,
+}
 
+impl AsRef<(Zphi, RSAGroup, RSAGroup)> for MirrorTlSecret {
+    fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
+        return &(&self.a, &self.r, &self.r_aux);
+    }
 }
 
 impl MasterTl {
@@ -50,6 +55,7 @@ pub fn generate_mirror_timeline(mtl: MasterTl) -> (MirrorTlPublic, MirrorTlSecre
     let r = mtl.m_1.pow_mod_m(&a_inner);
     let r_aux = mtl.m_0.pow_mod_m(&a_inner);
     let a = ZPhi::from(&a_inner);
+
     return (MirrorTlPublic {
         h,
         r_k0,

@@ -1,5 +1,11 @@
 use crate::*;
 use crate::timeline_calculator::*;
+use curv::cryptographic_primitives::proofs::{sigma_dlog,
+                                             sigma_correct_homomorphic_elgamal_enc,
+                                             sigma_ec_ddh};
+use curv::cryptographic_primitives::proofs::sigma_ec_ddh::{ECDDHProof, ECDDHWitness, ECDDHStatement};
+use bulletproof::proofs::range_proof::RangeProof;
+use curv::elliptic::curves::traits::ECPoint;
 
 pub struct Statement {
     mtl: MirrorTlPublic,
@@ -32,15 +38,20 @@ pub struct Secret {
 
 impl Secret {
     pub fn new(mtl: MirrorTlSecret, m: RSAGroup) -> Self {
-        return Secret { mtl, m, };
+        return Secret { mtl, m };
     }
 }
 
-struct MirrorTLProof {}
+struct MirrorTLProof(ECDDHProof<PedersenGroup>,
+                     ECDDHProof<PedersenGroup>);
 
-struct UniquenessProof {}
+struct UniquenessProof {
+    p_eq: (ECDDHProof<PedersenGroup>,
+           ECDDHProof<PedersenGroup>),
+    p_range: RangeProof,
+}
 
-struct CommitmentEqProof {}
+struct CommitmentEqProof(ECDDHProof<PedersenGroup>);
 
 pub struct Proofs {
     m: MirrorTLProof,
@@ -49,6 +60,16 @@ pub struct Proofs {
 }
 
 pub fn proof(state: Statement, secret: Secret) -> Proofs {
+    let mp: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
+        &ECDDHWitness {
+            x: secret.mtl
+        },
+        &ECDDHStatement {
+            g1: PedersenGroup::generator(),
+            h1: state.b_aux,
+            g2: state.b_aux,
+            h2: state.b,
+        });
     let m = MirrorTLProof {};
     let u = UniquenessProof {};
     let c = CommitmentEqProof {};
