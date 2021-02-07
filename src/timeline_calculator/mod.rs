@@ -24,16 +24,24 @@ pub struct MirrorTlSecret {
     r_aux: RSAGroup,
 }
 
-// impl MirrorTlSecret{
-//     fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
-//         return &(&self.a, &self.r, &self.r_aux);
-//     }
-// }
-impl AsRef<(Zphi, RSAGroup, RSAGroup)> for MirrorTlSecret {
-    fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
-        return &(&self.a, &self.r, &self.r_aux);
+impl MirrorTlSecret{
+    pub fn as_ref(&self) -> (&ZPhi, &RSAGroup, &RSAGroup) {
+        let ref_a = &self.a;
+        let ref_r = &self.r;
+        let ref_r_aux = &self.r_aux;
+        let ref_tuple = (ref_a, ref_r, ref_r_aux);
+        return ref_tuple;
     }
 }
+// impl AsRef<(&ZPhi, &RSAGroup, &RSAGroup)> for MirrorTlSecret {
+//     fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
+//         let ref_a = &self.a;
+//         let ref_r = &self.r;
+//         let ref_r_aux = &self.r_aux;
+//         let ref_tuple = &(ref_a, ref_r, ref_r_aux)
+//         return ref_tuple;
+//     }
+// }
 
 impl MasterTl {
     pub fn generate_master_timeline_trusted() -> Self {
