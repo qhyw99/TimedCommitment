@@ -50,7 +50,7 @@ struct MirrorTLProof(
 struct UniquenessProof {
     p_eq: (ECDDHProof<PedersenGroup>,
            ECDDHProof<PedersenGroup>),
-    p_range: RangeProofWIP
+    p_range: (RangeProofWIP, StatementRP),
 }
 
 struct CommitmentEqProof(
@@ -88,32 +88,64 @@ pub fn proof(state: Statement, secret: Secret) -> Proofs {
             g2: state.b,
             h2: state.B,
         });
+
     let usize_length = M.bit_length();
     let length = BigInt::from(usize_length as u32);
     //2 ^ length
     let u_l = BigInt::from(2).powm(&length, &M);
     //secret = r - M + 2 ^ length in [0,2^length]  AND r in [0,2^length]
-    let mut v_secret = vec![];
-    v_secret.push((r - &M + u_l).into());
-    v_secret.push(r.into());
-    let blinding = [BigInt::zero().into(); 2];
+    let mut v_secret: Vec<PedersenScaler> = vec![];
+    v_secret.push((r + &u_l - M.clone()).into()); //[g^(u_l)*b]/(g^M) commitment
+    v_secret.push(r.into()); //b
+    v_secret.push((r_aux + &u_l - M.clone()).into()); //[g^(u_l)*b_aux]/(g^M)
+    v_secret.push(r_aux.into()); //b_aux
+    let blinding = [BigInt::zero().into(); 4];
     let seed = BigInt::from("zhang_xi".as_bytes());
 
-    let mut stmt = StatementRP::generate_bases(&seed, 1, usize_length);
-    stmt.H = PedersenGroup::generator().scalar_mul(BigInt::from(0).into());
-    //blinding ->one
-    let p_range = RangeProofWIP::prove(stmt, v_secret, &blinding[..]);
+    //H直接变为单位元
+    let stmt = StatementRP::generate_bases(&seed, 4, usize_length);
+    let p_range = RangeProofWIP::prove(stmt.clone(), v_secret, &blinding[..]);
+
     let m = MirrorTLProof();
     let u = UniquenessProof {
         p_eq: (u_p_eq_0, u_p_eq_1),
-        p_range
+        p_range: (p_range, stmt),
     };
     let c = CommitmentEqProof();
     let proofs = Proofs { m, u, c };
     return proofs;
 }
 
-pub fn verify(proofs: Proofs) -> bool {
+pub fn verify(state: Statement, proofs: Proofs) -> bool {
+    let usize_length = M.bit_length();
+    let length = BigInt::from(usize_length as u32);
+    //2 ^ length
+    let u_l = BigInt::from(2).powm(&length, &M);
+    let u_l_f: PedersenScaler = u_l.into();
+
+    let m_f :PedersenScaler = M.clone().into();
+
+    let generator = PedersenGroup::generator();
+    let u_l_g = generator * u_l_f ;
+    let m_g = generator * m_f;
+    //(u_l_g + state.b).sub_point(&m_g);
+    let mut v_commit: Vec<PedersenGroup> = vec![];
+    v_commit.push((u_l_g - m_g + state.b)); //(u_l)g + b - Mg
+    v_commit.push(r.into()); //b
+    v_commit.push((r_aux + &u_l - M.clone()).into()); //(u_l)g + b_aux - Mg
+    v_commit.push(r_aux.into()); //b_aux
+
+    let result1= proofs.u.p_range.0.aggregated_verify(proofs.u.p_range.1, &[]);
+
+
+    // let mtl: (&RSAGroup, &RSAGroup, &RSAGroup) = secret.mtl.as_ref();
+    // let h = mtl.0.as_ref();
+    // let r_k0 = mtl.1.as_ref();
+    // let r_k1 = mtl.2.as_ref();
+    // proofs.u.p_eq.0.verify(&ECDDHStatement {});
+    // proofs.u.p_eq.1.verify();
+
+
     let result = true;
     return result;
 }

@@ -17,7 +17,15 @@ pub struct MirrorTlPublic {
     pub r_k0: RSAGroup,
     pub r_k1: RSAGroup,
 }
-
+impl MirrorTlPublic{
+    pub fn as_ref(&self) -> (&RSAGroup, &RSAGroup, &RSAGroup) {
+        let ref_h = &self.h;
+        let ref_r_k0 = &self.r_k0;
+        let ref_r_k1 = &self.r_k1;
+        let ref_tuple = (ref_h, ref_r_k0, ref_r_k1);
+        return ref_tuple;
+    }
+}
 pub struct MirrorTlSecret {
     a: ZPhi,
     r: RSAGroup,
