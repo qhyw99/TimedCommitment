@@ -102,7 +102,7 @@ dependencies = [
 [[package]]
 name = "bulletproof"
 version = "1.1.2"
-source = "git+https://github.com/qhyw99/bulletproofs#4fda545e5116b1a2272f10564ae63f041d435cb7"
+source = "git+https://github.com/qhyw99/bulletproofs#5bc52c6563e766bd86f3f29058e0c57ece166632"
 dependencies = [
  "curv",
  "itertools",
@@ -193,7 +193,7 @@ checksum = "e35f15e1a0699dd988fed910dd78fdc6407f44654cd12589c91fa44ea67d9159"
 [[package]]
 name = "curv"
 version = "0.3.3"
-source = "git+https://github.com/qhyw99/curv#732019e451fd1daf0dc6b7bb9d7f1e034f13c327"
+source = "git+https://github.com/qhyw99/curv#f10c42e0647b6d355c947f4bb35414d239c7c839"
 dependencies = [
  "blake2b_simd",
  "bls12_381",

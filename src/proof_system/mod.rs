@@ -139,7 +139,7 @@ pub fn verify(state: Statement, proofs: Proofs) -> bool {
 
 
     let result1=
-        proofs.u.p_range.0.aggregated_verify(
+        proofs.u.p_range.0.verify(
             proofs.u.p_range.1, v_commit.as_slice());
 
     // let mtl: (&RSAGroup, &RSAGroup, &RSAGroup) = secret.mtl.as_ref();

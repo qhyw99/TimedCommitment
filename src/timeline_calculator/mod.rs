@@ -93,7 +93,7 @@ fn pedersen_commit(g_exp: &BigInt, h_exp: &BigInt) -> PedersenGroup {
 }
 
 pub fn commit_message(message: &BigInt, blind: &MirrorTlSecret, public: &MirrorTlPublic) -> (PedersenGroup, PedersenGroup, PedersenGroup, PedersenGroup) {
-    let one = BigInt::one();
+    let one = BigInt::zero();
     let four_element_tuple =
         (pedersen_commit(message, blind.r.as_ref()),
          pedersen_commit(public.r_k1.as_ref(), &one),
