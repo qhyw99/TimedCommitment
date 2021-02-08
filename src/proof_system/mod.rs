@@ -128,14 +128,19 @@ pub fn verify(state: Statement, proofs: Proofs) -> bool {
     let generator = PedersenGroup::generator();
     let u_l_g = generator * u_l_f ;
     let m_g = generator * m_f;
-    //(u_l_g + state.b).sub_point(&m_g);
-    let mut v_commit: Vec<PedersenGroup> = vec![];
-    v_commit.push((u_l_g - m_g + state.b)); //(u_l)g + b - Mg
-    v_commit.push(r.into()); //b
-    v_commit.push((r_aux + &u_l - M.clone()).into()); //(u_l)g + b_aux - Mg
-    v_commit.push(r_aux.into()); //b_aux
+    let common = &u_l_g - &m_g;
 
-    let result1= proofs.u.p_range.0.aggregated_verify(proofs.u.p_range.1, &[]);
+
+    let mut v_commit: Vec<PedersenGroup> = vec![];
+    v_commit.push((&u_l_g - &m_g + &state.b)); //(u_l)g + b - Mg
+    v_commit.push(state.b.clone()); //b
+    v_commit.push((&u_l_g - &m_g + &state.b_aux)); //(u_l)g + b_aux - Mg
+    v_commit.push(state.b_aux.clone()); //b_aux
+
+
+    let result1=
+        proofs.u.p_range.0.aggregated_verify(
+            proofs.u.p_range.1, v_commit.as_slice());
 
 
     // let mtl: (&RSAGroup, &RSAGroup, &RSAGroup) = secret.mtl.as_ref();
@@ -145,9 +150,14 @@ pub fn verify(state: Statement, proofs: Proofs) -> bool {
     // proofs.u.p_eq.0.verify(&ECDDHStatement {});
     // proofs.u.p_eq.1.verify();
 
-
-    let result = true;
-    return result;
+    match result1 {
+        Ok(()) => {
+            return true
+        },
+        Err(..) => {
+            return false
+        }
+    }
 }
 
 #[cfg(test)]
