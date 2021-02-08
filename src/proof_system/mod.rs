@@ -7,6 +7,7 @@ use curv::cryptographic_primitives::proofs::sigma_ec_ddh::{ECDDHProof, ECDDHWitn
 use bulletproof::proofs::range_proof_wip::*;
 use curv::elliptic::curves::traits::ECPoint;
 
+#[derive(Clone)]
 pub struct Statement {
     mtl: MirrorTlPublic,
     C: PedersenGroup,
@@ -141,7 +142,6 @@ pub fn verify(state: Statement, proofs: Proofs) -> bool {
     let result1=
         proofs.u.p_range.0.aggregated_verify(
             proofs.u.p_range.1, v_commit.as_slice());
-
 
     // let mtl: (&RSAGroup, &RSAGroup, &RSAGroup) = secret.mtl.as_ref();
     // let h = mtl.0.as_ref();

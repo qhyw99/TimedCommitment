@@ -3,7 +3,7 @@ use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCo
 use curv::cryptographic_primitives::commitments::traits::Commitment;
 
 const k: u32 = 50;
-
+#[derive(Clone)]
 pub struct MasterTl {
     pub generator: RSAGroup,
     pub u_0: RSAGroup,
@@ -11,7 +11,7 @@ pub struct MasterTl {
     pub m_0: RSAGroup,
     pub m_1: RSAGroup,
 }
-
+#[derive(Clone)]
 pub struct MirrorTlPublic {
     pub h: RSAGroup,
     pub r_k0: RSAGroup,
