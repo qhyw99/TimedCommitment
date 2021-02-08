@@ -6,6 +6,7 @@ use curv::cryptographic_primitives::proofs::{sigma_dlog,
 use curv::cryptographic_primitives::proofs::sigma_ec_ddh::{ECDDHProof, ECDDHWitness, ECDDHStatement};
 use bulletproof::proofs::range_proof_wip::*;
 use curv::elliptic::curves::traits::ECPoint;
+use std::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct Statement {
@@ -90,17 +91,17 @@ pub fn proof(state: Statement, secret: Secret) -> Proofs {
             h2: state.B,
         });
 
-    let usize_length = M.bit_length();
-    let length = BigInt::from(usize_length as u32);
+    let usize_length = M.bit_length() + 1;
     //2 ^ length
-    let u_l = BigInt::from(2).powm(&length, &M);
+    let u_l = BigInt::from(2).pow(usize_length as u32);
+
     //secret = r - M + 2 ^ length in [0,2^length]  AND r in [0,2^length]
     let mut v_secret: Vec<PedersenScaler> = vec![];
-    v_secret.push((r + &u_l - M.clone()).into()); //[g^(u_l)*b]/(g^M) commitment
-    v_secret.push(r.into()); //b
-    v_secret.push((r_aux + &u_l - M.clone()).into()); //[g^(u_l)*b_aux]/(g^M)
-    v_secret.push(r_aux.into()); //b_aux
-    let blinding = [BigInt::zero().into(); 4];
+    v_secret.push((r + &u_l - M.clone()).borrow().into()); //[g^(u_l)*b]/(g^M) commitment
+    v_secret.push(r.borrow().into()); //b
+    v_secret.push((r_aux + &u_l - M.clone()).borrow().into()); //[g^(u_l)*b_aux]/(g^M)
+    v_secret.push(r_aux.borrow().into()); //b_aux
+    let blinding = [BigInt::zero().borrow().into(); 4];
     let seed = BigInt::from("zhang_xi".as_bytes());
 
     //H直接变为单位元
@@ -118,19 +119,17 @@ pub fn proof(state: Statement, secret: Secret) -> Proofs {
 }
 
 pub fn verify(state: Statement, proofs: Proofs) -> bool {
-    let usize_length = M.bit_length();
-    let length = BigInt::from(usize_length as u32);
+    let usize_length = M.bit_length() + 1;
     //2 ^ length
-    let u_l = BigInt::from(2).powm(&length, &M);
-    let u_l_f: PedersenScaler = u_l.into();
+    let u_l = BigInt::from(2).pow(usize_length as u32);
+    let u_l_f: PedersenScaler = (&u_l).into();
 
-    let m_f :PedersenScaler = M.clone().into();
+    let m_f :PedersenScaler = (&M as &BigInt).into();
 
     let generator = PedersenGroup::generator();
     let u_l_g = generator * u_l_f ;
     let m_g = generator * m_f;
-    let common = &u_l_g - &m_g;
-
+    //let common = &u_l_g - &m_g;
 
     let mut v_commit: Vec<PedersenGroup> = vec![];
     v_commit.push((&u_l_g - &m_g + &state.b)); //(u_l)g + b - Mg
@@ -154,7 +153,8 @@ pub fn verify(state: Statement, proofs: Proofs) -> bool {
         Ok(()) => {
             return true
         },
-        Err(..) => {
+        Err(e) => {
+            println!("{:?}",e);
             return false
         }
     }
