@@ -84,11 +84,8 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     let m_1 = master_tl.4.as_ref();
     //Well-formed-ness proof
     //witness: a  Statement:g h m_0 r_k0
-    let mut vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
-    let vec_group: Vec<PedersenGroup> = vec_int.into_iter().map(|x| {
-        PedersenGroup::generator() * (x.into() as PedersenScaler)
-    }).collect();
-    let slice_group = vec_group.as_ptr();
+    let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
+    let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
 
     let m_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
         &ECDDHWitness {
@@ -195,27 +192,42 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
     let r_k0 = mtl.1.as_ref();
     let r_k1 = mtl.2.as_ref();
 
+    let master_tl: (&RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup) =
+        master_tl.as_ref();
+    let generator = master_tl.0.as_ref();
+    let m_0 = master_tl.3.as_ref();
+    let m_1 = master_tl.4.as_ref();
+
+    let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
+    let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
+
     //Well-formed-ness verify
-    proofs.m.0.verify(&ECDDHStatement {
-        g1: PedersenGroup::generator(),
-        h1: h.into(),
-        g2: master_tl.m_0,
-        h2: r_k0.into(),
-    });
-    proofs.m.1.verify(&ECDDHStatement {
-        g1: master_tl.m_0,
-        h1: r_k0.into(),
-        g2: master_tl.m_1,
-        h2: r_k1.into(),
-    });
+    let result1_0 = proofs.m.0.verify(
+        unsafe {
+            &ECDDHStatement {
+                g1: slice_group.add(0).read(),
+                h1: slice_group.add(1).read(),
+                g2: slice_group.add(2).read(),
+                h2: slice_group.add(3).read(),
+            }
+        });
+    let result1_1 = proofs.m.1.verify(
+        unsafe {
+            &ECDDHStatement {
+                g1: slice_group.add(2).read(),
+                h1: slice_group.add(3).read(),
+                g2: slice_group.add(4).read(),
+                h2: slice_group.add(5).read(),
+            }
+        });
     //Uniqueness verify
-    proofs.u.p_eq.0.verify(&ECDDHStatement {
+    let result2_0_0 = proofs.u.p_eq.0.verify(&ECDDHStatement {
         g1: PedersenGroup::generator(),
         h1: state.b_aux,
         g2: state.b_aux,
         h2: state.b,
     });
-    proofs.u.p_eq.1.verify(
+    let result2_0_1 = proofs.u.p_eq.1.verify(
         &ECDDHStatement {
             g1: PedersenGroup::generator(),
             h1: state.b,
@@ -240,20 +252,41 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
     v_commit.push((&u_l_g - &m_g + &state.b_aux)); //(u_l)g + b_aux - Mg
     v_commit.push(state.b_aux.clone()); //b_aux
 
-    let result2 =
+    let result2_1 =
         proofs.u.p_range.0.verify(
             proofs.u.p_range.1, v_commit.as_slice());
 
+    let result3 = proofs.c.0.verify(&HomoElGamalStatement {
+        G: PedersenGroup::generator(),
+        H: PedersenGroup::generator(),
+        Y: PedersenGroup::base_point2(),
+        D: state.C,
+        E: state.b,
+    });
 
-    match result2 {
-        Ok(()) => {
-            return true;
-        }
-        Err(e) => {
-            println!("{:?}", e);
-            return false;
-        }
-    }
+    let result_vec = vec![result1_0,result1_1,result2_0_0,result2_0_1,result2_1,result3];
+    let final_status = result_vec.into_iter().fold(true, |acc,x|{
+        acc && x.is_ok()
+    });
+
+    return final_status;
+    // match result2 {
+    //     Ok(()) => {
+    //         return true;
+    //     }
+    //     Err(e) => {
+    //         println!("{:?}", e);
+    //         return false;
+    //     }
+    // }
+}
+
+pub fn generate_pedersen_group_from_rsa_group(vec_int: Vec<&BigInt>) -> *const PedersenGroup {
+    let vec_group: Vec<PedersenGroup> = vec_int.into_iter().map(|x| {
+        PedersenGroup::generator() * (x.into() as PedersenScaler)
+    }).collect();
+    let slice_group = vec_group.as_ptr();
+    return slice_group;
 }
 
 #[cfg(test)]
