@@ -13,13 +13,18 @@ use crate::proof_system::{Statement, proof, verify, Secret};
 
 type RSAGroup = Zqf;
 type ZPhi = Zqf;
-type PedersenGroup = RistrettoCurvPoint; //TODO 改成其他
+//群的阶数较小
+type PedersenGroup = RistrettoCurvPoint;
 type PedersenScaler = RistrettoScalar;
+// //群阶数较大
+// type IntegerGroup = curv::elliptic::curves::integer_group::Zqg;
+// type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
 
 fn main() {
     //Init
     let msg = BigInt::from("My choice is true!".as_ref());
     let mtl = MasterTl::generate_master_timeline_trusted();
+    //let mtl_to_ref = mtl.clone();
 
     //Commit
     let (mtl_p, mtl_s) = generate_mirror_timeline(mtl);
@@ -29,10 +34,10 @@ fn main() {
     let statement = Statement::new(mtl_p, commit);
     let statement_to_transfer = statement.clone();
     let secret = Secret::new(mtl_s, RSAGroup::from(msg));
-    let proofs = proof(statement, secret);
+    let proofs = proof(mtl.clone(),statement, secret);
 
     //Verify
-    let status = verify(statement_to_transfer,proofs);
+    let status = verify(mtl.clone(),statement_to_transfer,proofs);
 
     println!("{:?}",status);
 }

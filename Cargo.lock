@@ -193,7 +193,7 @@ checksum = "e35f15e1a0699dd988fed910dd78fdc6407f44654cd12589c91fa44ea67d9159"
 [[package]]
 name = "curv"
 version = "0.3.3"
-source = "git+https://github.com/qhyw99/curv#f10c42e0647b6d355c947f4bb35414d239c7c839"
+source = "git+https://github.com/qhyw99/curv#c3f281ed1a84779f3044134951d392b15ae59b28"
 dependencies = [
  "blake2b_simd",
  "bls12_381",
@@ -413,9 +413,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.85"
+version = "0.2.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ccac4b00700875e6a07c6cde370d44d32fa01c5a65cdd2fca6858c479d28bb3"
+checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
 
 [[package]]
 name = "merkle-sha3"

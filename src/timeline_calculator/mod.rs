@@ -1,8 +1,10 @@
 use super::*;
 use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use curv::cryptographic_primitives::commitments::traits::Commitment;
+use std::borrow::Borrow;
 
 const k: u32 = 50;
+
 #[derive(Clone)]
 pub struct MasterTl {
     pub generator: RSAGroup,
@@ -11,13 +13,27 @@ pub struct MasterTl {
     pub m_0: RSAGroup,
     pub m_1: RSAGroup,
 }
+
+impl MasterTl {
+    pub fn as_ref(&self) ->
+    (&RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup) {
+        return (self.generator.borrow(),
+                self.u_0.borrow(),
+                self.u_1.borrow(),
+                self.m_0.borrow(),
+                self.m_1.borrow()
+        );
+    }
+}
+
 #[derive(Clone)]
 pub struct MirrorTlPublic {
     pub h: RSAGroup,
     pub r_k0: RSAGroup,
     pub r_k1: RSAGroup,
 }
-impl MirrorTlPublic{
+
+impl MirrorTlPublic {
     pub fn as_ref(&self) -> (&RSAGroup, &RSAGroup, &RSAGroup) {
         let ref_h = &self.h;
         let ref_r_k0 = &self.r_k0;
@@ -26,13 +42,14 @@ impl MirrorTlPublic{
         return ref_tuple;
     }
 }
+
 pub struct MirrorTlSecret {
     a: ZPhi,
     r: RSAGroup,
     r_aux: RSAGroup,
 }
 
-impl MirrorTlSecret{
+impl MirrorTlSecret {
     pub fn as_ref(&self) -> (&ZPhi, &RSAGroup, &RSAGroup) {
         let ref_a = &self.a;
         let ref_r = &self.r;
