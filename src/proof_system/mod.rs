@@ -70,6 +70,7 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     let r = mtl.1.as_ref();
     let r_aux = mtl.2.as_ref();
     let a = mtl.0.as_ref();
+    let msg = secret.m.as_ref();
 
     let mtl: (&RSAGroup, &RSAGroup, &RSAGroup) = state.mtl.as_ref();
     let h = mtl.0.as_ref();
@@ -87,7 +88,6 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     let vec_group: Vec<PedersenGroup> = vec_int.into_iter().map(|x| {
         PedersenGroup::generator() * (x.into() as PedersenScaler)
     }).collect();
-    //let s = vec_group.into_raw_parts();
     let slice_group = vec_group.as_ptr();
 
     let m_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
@@ -162,18 +162,18 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     // statement: C = g^m * h^r; b = g^r
     // witness: (m,r)
     // primitive:
-    // statement: D = xH + rG; E = xG
+    // statement: D = xH + rY; E = rG
     // witness: (x,r)
     let hes = HomoElGamalStatement {
-        G: (),
-        H: (),
-        Y: (),
-        D: (),
-        E: (),
+        G: PedersenGroup::generator(),
+        H: PedersenGroup::generator(),
+        Y: PedersenGroup::base_point2(),
+        D: state.C,
+        E: state.b,
     };
     let hew = HomoElGamalWitness {
-        r: (),
-        x: (),
+        r: r.into(),
+        x: msg.into(),
     };
     let p_c_eq = HomoELGamalProof::prove(hew.borrow(), hes.borrow());
 
@@ -194,6 +194,7 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
     let h = mtl.0.as_ref();
     let r_k0 = mtl.1.as_ref();
     let r_k1 = mtl.2.as_ref();
+
     //Well-formed-ness verify
     proofs.m.0.verify(&ECDDHStatement {
         g1: PedersenGroup::generator(),
@@ -201,7 +202,6 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
         g2: master_tl.m_0,
         h2: r_k0.into(),
     });
-
     proofs.m.1.verify(&ECDDHStatement {
         g1: master_tl.m_0,
         h1: r_k0.into(),
