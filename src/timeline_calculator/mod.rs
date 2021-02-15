@@ -70,17 +70,24 @@ impl MirrorTlSecret {
 
 impl MasterTl {
     pub fn generate_master_timeline_trusted() -> Self {
-        let base = RSAGroup::from(&BigInt::from(2));
-        let exp0 = BigInt::from(2_i64.pow(k - 1));
-        let exp1 = BigInt::from(2_i64.pow(k));
-        let u_0 = base.pow_mod_m(&exp0);
-        let u_1 = base.pow_mod_m(&exp1);
+        let generator = Zqf::from(g.clone());
 
-        let m_1 = u_1.sqrt();
+        let base = Zqf::from(&BigInt::from(2));
+        let exp0 = BigInt::from(2_u64.pow(k - 1));
+        let exp1 = BigInt::from(2_u64.pow(k));
+        let exp1_0 = BigInt::from(2_u64.pow(k) - 2);
+        let exp1_1 = BigInt::from(2_u64.pow(k) - 1);
+        let a_0 = base.pow_mod_phi(&exp0);
+        let a_1 = base.pow_mod_phi(&exp1);
+        let a_1_0 = base.pow_mod_phi(&exp1_0);
+        let a_1_1 = base.pow_mod_phi(&exp1_1);
 
-        let m_0 = m_1.sqrt();
+        let u_0 = generator.pow_mod_m(a_0.as_ref());
+        let u_1 = generator.pow_mod_m(a_1.as_ref());
 
-        let generator: RSAGroup = RSAGroup::from(g.clone());
+        let m_1 = generator.pow_mod_m(a_1_1.as_ref());
+        let m_0 = generator.pow_mod_m(a_1_0.as_ref());
+
         return MasterTl { generator, u_0, u_1, m_0, m_1 };
     }
 }
@@ -93,6 +100,8 @@ pub fn generate_mirror_timeline(mtl: MasterTl) -> (MirrorTlPublic, MirrorTlSecre
     let r = mtl.m_1.pow_mod_m(&a_inner);
     let r_aux = mtl.m_0.pow_mod_m(&a_inner);
     let a = ZPhi::from(&a_inner);
+
+    //assert_eq!(r_aux.square(),r);
 
     return (MirrorTlPublic {
         h,

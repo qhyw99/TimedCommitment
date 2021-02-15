@@ -1,12 +1,12 @@
 use crate::*;
 use crate::timeline_calculator::*;
-use curv::cryptographic_primitives::proofs::{sigma_correct_homomorphic_elgamal_enc,
-                                             sigma_ec_ddh};
+use curv::cryptographic_primitives::proofs::{sigma_correct_homomorphic_elgamal_enc, sigma_ec_ddh, ProofError};
 use curv::cryptographic_primitives::proofs::sigma_ec_ddh::{ECDDHProof, ECDDHWitness, ECDDHStatement};
 use curv::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_enc::{HomoELGamalProof, HomoElGamalStatement, HomoElGamalWitness};
 use bulletproof::proofs::range_proof_wip::*;
-use curv::elliptic::curves::traits::ECPoint;
+use curv::elliptic::curves::traits::{ECPoint, ECScalar};
 use std::borrow::Borrow;
+use std::ops::Div;
 
 #[derive(Clone)]
 pub struct Statement {
@@ -45,13 +45,13 @@ impl Secret {
 }
 
 struct MirrorTLProof(
-    ECDDHProof<PedersenGroup>,
-    ECDDHProof<PedersenGroup>,
+    ECDDHProof<IntegerGroup>,
+    ECDDHProof<IntegerGroup>,
 );
 
 struct UniquenessProof {
-    p_eq: (ECDDHProof<PedersenGroup>,
-           ECDDHProof<PedersenGroup>),
+    p_eq: (HomoELGamalProof<PedersenGroup>,
+           HomoELGamalProof<PedersenGroup>),
     p_range: (RangeProofWIP, StatementRP),
 }
 
@@ -60,7 +60,7 @@ struct CommitmentEqProof(
 );
 
 pub struct Proofs {
-    m: MirrorTLProof,
+    //m: MirrorTLProof,
     u: UniquenessProof,
     c: CommitmentEqProof,
 }
@@ -82,60 +82,56 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     let generator = master_tl.0.as_ref();
     let m_0 = master_tl.3.as_ref();
     let m_1 = master_tl.4.as_ref();
-    //Well-formed-ness proof
-    //witness: a  Statement:g h m_0 r_k0
-    let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
-    let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
-
-    let m_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
-        &ECDDHWitness {
-            x: a.into()
-        },
-        unsafe {
-            &ECDDHStatement {
-                g1: slice_group.add(0).read(),
-                h1: slice_group.add(1).read(),
-                g2: slice_group.add(2).read(),
-                h2: slice_group.add(3).read(),
-            }
-        });
-    //witness: a Statement:m_0 r_k0 m_1 r_k1
-    let m_eq_1: ECDDHProof<IntegerGroup> = sigma_ec_ddh::ECDDHProof::prove(
-        &ECDDHWitness {
-            x: a.into()
-        },
-        unsafe {
-            &ECDDHStatement {
-                g1: slice_group.add(2).read(),
-                h1: slice_group.add(3).read(),
-                g2: slice_group.add(4).read(),
-                h2: slice_group.add(5).read(),
-            }
-        });
 
     //Uniqueness proof:
+    //get H (common)
+    let M_sf: PedersenScaler = (&M as &BigInt).into();
+    let M_gr = PedersenGroup::identity() - (PedersenGroup::generator() * M_sf).borrow();
     //b b_aux g
-    let u_p_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
-        &ECDDHWitness {
-            x: r_aux.into()
-        },
-        &ECDDHStatement {
-            g1: PedersenGroup::generator(),
-            h1: state.b_aux,
-            g2: state.b_aux,
-            h2: state.b,
-        });
+    //D = b E = b_aux
+    //H = generator^M x = k
+    //Y = b_aux r = r_aux
+    //G = generator
+
+    //get x
+    let x_0: PedersenScaler = (r_aux.pow(2) - r).div(&M as &BigInt).borrow().into();
+    //get r
+    let r_aux_sf: PedersenScaler = r_aux.into();
+    let u_hes_0 = HomoElGamalStatement {
+        G: PedersenGroup::generator(),
+        H: M_gr.clone(),
+        Y: state.b_aux.clone(),
+        D: state.b.clone(),
+        E: state.b_aux.clone(),
+    };
+    let u_hew_0 = HomoElGamalWitness {
+        r: r_aux_sf,
+        x: x_0,
+    };
+    let u_p_eq_0 = HomoELGamalProof::prove(u_hew_0.borrow(), u_hes_0.borrow());
+
     //B b g
-    let u_p_eq_1: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
-        &ECDDHWitness {
-            x: r.into()
-        },
-        &ECDDHStatement {
-            g1: PedersenGroup::generator(),
-            h1: state.b,
-            g2: state.b,
-            h2: state.B,
-        });
+    //D = B E = b
+    //H = generator^M x = k
+    //Y = b r = r
+    //G = generator
+
+    //get x
+    let x_1: PedersenScaler = (r.pow(2) - r_k1).div(&M as &BigInt).borrow().into();
+    //get r
+    let r_sf: PedersenScaler = r.into();
+    let u_hes_1 = HomoElGamalStatement {
+        G: PedersenGroup::generator(),
+        H: M_gr.clone(),
+        Y: state.b.clone(),
+        D: state.B.clone(),
+        E: state.b.clone(),
+    };
+    let u_hew_1 = HomoElGamalWitness {
+        r: r_sf,
+        x: x_1,
+    };
+    let u_p_eq_1 = HomoELGamalProof::prove(u_hew_1.borrow(), u_hes_1.borrow());
 
     let usize_length = M.bit_length() + 1;
     //2 ^ length
@@ -161,28 +157,28 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     // primitive:
     // statement: D = xH + rY; E = rG
     // witness: (x,r)
-    let hes = HomoElGamalStatement {
+    let c_hes = HomoElGamalStatement {
         G: PedersenGroup::generator(),
         H: PedersenGroup::generator(),
         Y: PedersenGroup::base_point2(),
         D: state.C,
         E: state.b,
     };
-    let hew = HomoElGamalWitness {
+    let c_hew = HomoElGamalWitness {
         r: r.into(),
         x: msg.into(),
     };
-    let p_c_eq = HomoELGamalProof::prove(hew.borrow(), hes.borrow());
+    let p_c_eq = HomoELGamalProof::prove(c_hew.borrow(), c_hes.borrow());
 
     //Construct proof
-    let m = MirrorTLProof(m_eq_0, m_eq_1);
+    //let m = MirrorTLProof(m_eq_0, m_eq_1);
     let u = UniquenessProof {
         p_eq: (u_p_eq_0, u_p_eq_1),
         p_range: (p_range, stmt),
     };
     let c = CommitmentEqProof(p_c_eq);
 
-    let proofs = Proofs { m, u, c };
+    let proofs = Proofs { u, c };
     return proofs;
 }
 
@@ -198,41 +194,26 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
     let m_0 = master_tl.3.as_ref();
     let m_1 = master_tl.4.as_ref();
 
-    let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
-    let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
+    let M_sf: PedersenScaler = (&M as &BigInt).into();
+    let M_gr = PedersenGroup::identity() - (PedersenGroup::generator() * M_sf).borrow();
 
-    //Well-formed-ness verify
-    let result1_0 = proofs.m.0.verify(
-        unsafe {
-            &ECDDHStatement {
-                g1: slice_group.add(0).read(),
-                h1: slice_group.add(1).read(),
-                g2: slice_group.add(2).read(),
-                h2: slice_group.add(3).read(),
-            }
-        });
-    let result1_1 = proofs.m.1.verify(
-        unsafe {
-            &ECDDHStatement {
-                g1: slice_group.add(2).read(),
-                h1: slice_group.add(3).read(),
-                g2: slice_group.add(4).read(),
-                h2: slice_group.add(5).read(),
-            }
-        });
     //Uniqueness verify
-    let result2_0_0 = proofs.u.p_eq.0.verify(&ECDDHStatement {
-        g1: PedersenGroup::generator(),
-        h1: state.b_aux,
-        g2: state.b_aux,
-        h2: state.b,
-    });
+    let result2_0_0 = proofs.u.p_eq.0.verify(
+        &HomoElGamalStatement {
+            G: PedersenGroup::generator(),
+            H: M_gr.clone(),
+            Y: state.b_aux.clone(),
+            D: state.b.clone(),
+            E: state.b_aux.clone(),
+
+        });
     let result2_0_1 = proofs.u.p_eq.1.verify(
-        &ECDDHStatement {
-            g1: PedersenGroup::generator(),
-            h1: state.b,
-            g2: state.b,
-            h2: state.B,
+        &HomoElGamalStatement {
+            G: PedersenGroup::generator(),
+            H: M_gr.clone(),
+            Y: state.b.clone(),
+            D: state.B.clone(),
+            E: state.b.clone(),
         }
     );
     let usize_length = M.bit_length() + 1;
@@ -254,7 +235,9 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
 
     let result2_1 =
         proofs.u.p_range.0.verify(
-            proofs.u.p_range.1, v_commit.as_slice());
+            proofs.u.p_range.1, v_commit.as_slice()).map_err(|e| {
+            ProofError
+        });
 
     let result3 = proofs.c.0.verify(&HomoElGamalStatement {
         G: PedersenGroup::generator(),
@@ -264,31 +247,83 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
         E: state.b,
     });
 
-    let result_vec = vec![result1_0,result1_1,result2_0_0,result2_0_1,result2_1,result3];
-    let final_status = result_vec.into_iter().fold(true, |acc,x|{
+    let result_vec = vec![result2_0_0, result2_0_1, result2_1, result3];
+    let final_status = result_vec.into_iter().fold(true, |acc, x| {
+        println!("{:?}", x);
         acc && x.is_ok()
     });
 
     return final_status;
-    // match result2 {
-    //     Ok(()) => {
-    //         return true;
-    //     }
-    //     Err(e) => {
-    //         println!("{:?}", e);
-    //         return false;
-    //     }
-    // }
 }
+// let r_aux_test:PedersenScaler = r_aux.into();
+// let test_b:PedersenGroup = state.b_aux.borrow() * r_aux_test.borrow();
+// assert_eq!(test_b,state.b); not equal
 
-pub fn generate_pedersen_group_from_rsa_group(vec_int: Vec<&BigInt>) -> *const PedersenGroup {
-    let vec_group: Vec<PedersenGroup> = vec_int.into_iter().map(|x| {
-        PedersenGroup::generator() * (x.into() as PedersenScaler)
-    }).collect();
-    let slice_group = vec_group.as_ptr();
-    return slice_group;
-}
+// pub fn generate_pedersen_group_from_rsa_group(vec_int: Vec<&BigInt>) -> *const PedersenGroup {
+//     let vec_group: Vec<PedersenGroup> = vec_int.into_iter().map(|x| {
+//         let i: PedersenScaler = x.into();
+//         PedersenGroup::generator() * i
+//     }).collect();
+//     let slice_group = vec_group.as_ptr();
+//     return slice_group;
+// }
+// Proof
+//Well-formed-ness proof
+//witness: a  Statement:g h m_0 r_k0
+// let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
+// let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
+//
+// let m_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
+//     &ECDDHWitness {
+//         x: a.into()
+//     },
+//     unsafe {
+//         &ECDDHStatement {
+//             g1: slice_group.add(0).read(),
+//             h1: slice_group.add(1).read(),
+//             g2: slice_group.add(2).read(),
+//             h2: slice_group.add(3).read(),
+//         }
+//     });
+// //witness: a Statement:m_0 r_k0 m_1 r_k1
+// let m_eq_1: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
+//     &ECDDHWitness {
+//         x: a.into()
+//     },
+//     unsafe {
+//         &ECDDHStatement {
+//             g1: slice_group.add(2).read(),
+//             h1: slice_group.add(3).read(),
+//             g2: slice_group.add(4).read(),
+//             h2: slice_group.add(5).read(),
+//         }
+//     });
 
+// Verify
+// let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
+// let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
+//
+// //Well-formed-ness verify
+// let result1_0 = proofs.m.0.verify(
+//     unsafe {
+//         &ECDDHStatement {
+//             g1: slice_group.add(0).read(),
+//             h1: slice_group.add(1).read(),
+//             g2: slice_group.add(2).read(),
+//             h2: slice_group.add(3).read(),
+//         }
+//     });
+// let result1_1 = proofs.m.1.verify(
+//     unsafe {
+//         &ECDDHStatement {
+//             g1: slice_group.add(2).read(),
+//             h1: slice_group.add(3).read(),
+//             g2: slice_group.add(4).read(),
+//             h2: slice_group.add(5).read(),
+//         }
+//     });
+// let k_status = (r_aux.pow(2) - r).is_multiple_of(M.borrow());
+// assert!(k_status);
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -17,8 +17,8 @@ type ZPhi = Zqf;
 type PedersenGroup = RistrettoCurvPoint;
 type PedersenScaler = RistrettoScalar;
 // //群阶数较大
-// type IntegerGroup = curv::elliptic::curves::integer_group::Zqg;
-// type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
+type IntegerGroup = curv::elliptic::curves::integer_group::Zqg;
+type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
 
 fn main() {
     //Init
@@ -27,7 +27,7 @@ fn main() {
     //let mtl_to_ref = mtl.clone();
 
     //Commit
-    let (mtl_p, mtl_s) = generate_mirror_timeline(mtl);
+    let (mtl_p, mtl_s) = generate_mirror_timeline(mtl.clone());
     let commit = commit_message(&msg, &mtl_s, &mtl_p);
 
     //Proof
