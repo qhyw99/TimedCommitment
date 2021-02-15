@@ -60,7 +60,7 @@ struct CommitmentEqProof(
 );
 
 pub struct Proofs {
-    //m: MirrorTLProof,
+    m: MirrorTLProof,
     u: UniquenessProof,
     c: CommitmentEqProof,
 }
@@ -80,8 +80,40 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     let master_tl: (&RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup) =
         master_tl.as_ref();
     let generator = master_tl.0.as_ref();
-    let m_0 = master_tl.3.as_ref();
-    let m_1 = master_tl.4.as_ref();
+    let m_0 = master_tl.1.as_ref();
+    let m_1 = master_tl.2.as_ref();
+
+    //Well-formed-ness proof
+    // witness: a  Statement:g h m_0 r_k0
+
+    let vec_int_0 = vec![generator, h, m_0, r_k0];
+    let vec_int_1 = vec![m_0, r_k0, m_1, r_k1];
+    let mut group_iter_0 = generate_integer_group_from_rsa_group(vec_int_0).into_iter();
+    let mut group_iter_1 = generate_integer_group_from_rsa_group(vec_int_1).into_iter();
+
+    let m_eq_0: ECDDHProof<IntegerGroup> = sigma_ec_ddh::ECDDHProof::prove(
+        &ECDDHWitness {
+            x: a.into()
+        },
+        &ECDDHStatement {
+            g1: group_iter_0.next().unwrap(),
+            h1: group_iter_0.next().unwrap(),
+            g2: group_iter_0.next().unwrap(),
+            h2: group_iter_0.next().unwrap(),
+        },
+    );
+    //witness: a Statement:m_0 r_k0 m_1 r_k1
+    let m_eq_1: ECDDHProof<IntegerGroup> = sigma_ec_ddh::ECDDHProof::prove(
+        &ECDDHWitness {
+            x: a.into()
+        },
+        &ECDDHStatement {
+            g1: group_iter_1.next().unwrap(),
+            h1: group_iter_1.next().unwrap(),
+            g2: group_iter_1.next().unwrap(),
+            h2: group_iter_1.next().unwrap(),
+        },
+    );
 
     //Uniqueness proof:
     //get H (common)
@@ -171,14 +203,14 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     let p_c_eq = HomoELGamalProof::prove(c_hew.borrow(), c_hes.borrow());
 
     //Construct proof
-    //let m = MirrorTLProof(m_eq_0, m_eq_1);
+    let m = MirrorTLProof(m_eq_0, m_eq_1);
     let u = UniquenessProof {
         p_eq: (u_p_eq_0, u_p_eq_1),
         p_range: (p_range, stmt),
     };
     let c = CommitmentEqProof(p_c_eq);
 
-    let proofs = Proofs { u, c };
+    let proofs = Proofs { m, u, c };
     return proofs;
 }
 
@@ -191,8 +223,31 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
     let master_tl: (&RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup, &RSAGroup) =
         master_tl.as_ref();
     let generator = master_tl.0.as_ref();
-    let m_0 = master_tl.3.as_ref();
-    let m_1 = master_tl.4.as_ref();
+    let m_0 = master_tl.1.as_ref();
+    let m_1 = master_tl.2.as_ref();
+
+    let vec_int_0 = vec![generator, h, m_0, r_k0];
+    let vec_int_1 = vec![m_0, r_k0, m_1, r_k1];
+    let mut group_iter_0 = generate_integer_group_from_rsa_group(vec_int_0).into_iter();
+    let mut group_iter_1 = generate_integer_group_from_rsa_group(vec_int_1).into_iter();
+
+    //Well-formed-ness verify
+    let result1_0 = proofs.m.0.verify(
+        &ECDDHStatement {
+            g1: group_iter_0.next().unwrap(),
+            h1: group_iter_0.next().unwrap(),
+            g2: group_iter_0.next().unwrap(),
+            h2: group_iter_0.next().unwrap(),
+        }
+    );
+    let result1_1 = proofs.m.1.verify(
+        &ECDDHStatement {
+            g1: group_iter_1.next().unwrap(),
+            h1: group_iter_1.next().unwrap(),
+            g2: group_iter_1.next().unwrap(),
+            h2: group_iter_1.next().unwrap(),
+        }
+    );
 
     let M_sf: PedersenScaler = (&M as &BigInt).into();
     let M_gr = PedersenGroup::identity() - (PedersenGroup::generator() * M_sf).borrow();
@@ -247,7 +302,7 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
         E: state.b,
     });
 
-    let result_vec = vec![result2_0_0, result2_0_1, result2_1, result3];
+    let result_vec = vec![result1_0, result1_1, result2_0_0, result2_0_1, result2_1, result3];
     let final_status = result_vec.into_iter().fold(true, |acc, x| {
         println!("{:?}", x);
         acc && x.is_ok()
@@ -259,69 +314,18 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
 // let test_b:PedersenGroup = state.b_aux.borrow() * r_aux_test.borrow();
 // assert_eq!(test_b,state.b); not equal
 
-// pub fn generate_pedersen_group_from_rsa_group(vec_int: Vec<&BigInt>) -> *const PedersenGroup {
-//     let vec_group: Vec<PedersenGroup> = vec_int.into_iter().map(|x| {
-//         let i: PedersenScaler = x.into();
-//         PedersenGroup::generator() * i
-//     }).collect();
-//     let slice_group = vec_group.as_ptr();
-//     return slice_group;
-// }
+pub fn generate_integer_group_from_rsa_group(vec_int: Vec<&BigInt>) -> Vec<IntegerGroup> {
+    let vec_group: Vec<IntegerGroup> = vec_int.into_iter().map(|x| {
+        let i: IntegerGroup = x.into();
+        i
+    }).collect();
+    vec_group
+}
 // Proof
-//Well-formed-ness proof
-//witness: a  Statement:g h m_0 r_k0
-// let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
-// let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
-//
-// let m_eq_0: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
-//     &ECDDHWitness {
-//         x: a.into()
-//     },
-//     unsafe {
-//         &ECDDHStatement {
-//             g1: slice_group.add(0).read(),
-//             h1: slice_group.add(1).read(),
-//             g2: slice_group.add(2).read(),
-//             h2: slice_group.add(3).read(),
-//         }
-//     });
-// //witness: a Statement:m_0 r_k0 m_1 r_k1
-// let m_eq_1: ECDDHProof<PedersenGroup> = sigma_ec_ddh::ECDDHProof::prove(
-//     &ECDDHWitness {
-//         x: a.into()
-//     },
-//     unsafe {
-//         &ECDDHStatement {
-//             g1: slice_group.add(2).read(),
-//             h1: slice_group.add(3).read(),
-//             g2: slice_group.add(4).read(),
-//             h2: slice_group.add(5).read(),
-//         }
-//     });
+
 
 // Verify
-// let vec_int = vec![generator, h, m_0, r_k0, m_1, r_k1];
-// let slice_group = generate_pedersen_group_from_rsa_group(vec_int);
-//
-// //Well-formed-ness verify
-// let result1_0 = proofs.m.0.verify(
-//     unsafe {
-//         &ECDDHStatement {
-//             g1: slice_group.add(0).read(),
-//             h1: slice_group.add(1).read(),
-//             g2: slice_group.add(2).read(),
-//             h2: slice_group.add(3).read(),
-//         }
-//     });
-// let result1_1 = proofs.m.1.verify(
-//     unsafe {
-//         &ECDDHStatement {
-//             g1: slice_group.add(2).read(),
-//             h1: slice_group.add(3).read(),
-//             g2: slice_group.add(4).read(),
-//             h2: slice_group.add(5).read(),
-//         }
-//     });
+
 // let k_status = (r_aux.pow(2) - r).is_multiple_of(M.borrow());
 // assert!(k_status);
 #[cfg(test)]

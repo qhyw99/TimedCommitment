@@ -193,7 +193,7 @@ checksum = "e35f15e1a0699dd988fed910dd78fdc6407f44654cd12589c91fa44ea67d9159"
 [[package]]
 name = "curv"
 version = "0.3.3"
-source = "git+https://github.com/qhyw99/curv#5ebbbe0320d3fb05dcf1b52b017c4e2cddbbd727"
+source = "git+https://github.com/qhyw99/curv#5d425873a102e6677b6124571358c235a6e5f133"
 dependencies = [
  "blake2b_simd",
  "bls12_381",
