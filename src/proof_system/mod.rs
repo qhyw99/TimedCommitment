@@ -65,7 +65,7 @@ pub struct Proofs {
     c: CommitmentEqProof,
 }
 
-pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
+pub fn proof(master_tl: MasterTl, state: &Statement, secret: Secret) -> Proofs {
     let mtl: (&ZPhi, &RSAGroup, &RSAGroup) = secret.mtl.as_ref();
     let r = mtl.1.as_ref();
     let r_aux = mtl.2.as_ref();
@@ -214,7 +214,7 @@ pub fn proof(master_tl: MasterTl, state: Statement, secret: Secret) -> Proofs {
     return proofs;
 }
 
-pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
+pub fn verify(master_tl: MasterTl, state: &Statement, proofs: Proofs) -> bool {
     let mtl: (&RSAGroup, &RSAGroup, &RSAGroup) = state.mtl.as_ref();
     let h = mtl.0.as_ref();
     let r_k0 = mtl.1.as_ref();
@@ -310,31 +310,10 @@ pub fn verify(master_tl: MasterTl, state: Statement, proofs: Proofs) -> bool {
 
     return final_status;
 }
-// let r_aux_test:PedersenScaler = r_aux.into();
-// let test_b:PedersenGroup = state.b_aux.borrow() * r_aux_test.borrow();
-// assert_eq!(test_b,state.b); not equal
-
 pub fn generate_integer_group_from_rsa_group(vec_int: Vec<&BigInt>) -> Vec<IntegerGroup> {
     let vec_group: Vec<IntegerGroup> = vec_int.into_iter().map(|x| {
         let i: IntegerGroup = x.into();
         i
     }).collect();
     vec_group
-}
-// Proof
-
-
-// Verify
-
-// let k_status = (r_aux.pow(2) - r).is_multiple_of(M.borrow());
-// assert!(k_status);
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn proof_verify() {
-        // let p = proof();
-        // assert!(verify(p));
-    }
 }

@@ -34,10 +34,14 @@ fn main() {
     let statement = Statement::new(mtl_p, commit);
     let statement_to_transfer = statement.clone();
     let secret = Secret::new(mtl_s, RSAGroup::from(msg));
-    let proofs = proof(mtl.clone(),statement, secret);
+    let proofs = proof(mtl.clone(), &statement, secret);
 
     //Verify
-    let status = verify(mtl.clone(),statement_to_transfer,proofs);
+    let status = verify(mtl.clone(), &statement_to_transfer, proofs);
 
-    println!("{:?}",status);
+    //Force open
+    if status {
+
+    }
+    //Open
 }

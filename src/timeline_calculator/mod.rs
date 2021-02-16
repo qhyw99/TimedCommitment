@@ -2,7 +2,7 @@ use super::*;
 use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use curv::cryptographic_primitives::commitments::traits::Commitment;
 use std::borrow::Borrow;
-
+pub mod salt_hash;
 const k: u32 = 50;
 
 #[derive(Clone)]
@@ -58,15 +58,6 @@ impl MirrorTlSecret {
         return ref_tuple;
     }
 }
-// impl AsRef<(&ZPhi, &RSAGroup, &RSAGroup)> for MirrorTlSecret {
-//     fn as_ref(&self) -> &(&ZPhi, &RSAGroup, &RSAGroup) {
-//         let ref_a = &self.a;
-//         let ref_r = &self.r;
-//         let ref_r_aux = &self.r_aux;
-//         let ref_tuple = &(ref_a, ref_r, ref_r_aux)
-//         return ref_tuple;
-//     }
-// }
 
 impl MasterTl {
     pub fn generate_master_timeline_trusted() -> Self {
@@ -126,6 +117,25 @@ pub fn commit_message(message: &BigInt, blind: &MirrorTlSecret, public: &MirrorT
          pedersen_commit(blind.r.as_ref(), &one),
          pedersen_commit(blind.r_aux.as_ref(), &one));
     return four_element_tuple;
+}
+//m r
+//Verify
+//C = g^m * g_1^r
+//&&
+//b = g^r
+pub fn open_message() -> bool{
+
+    let status = true;
+    return status;
+}
+//r_k0 -> r
+//r -> blind = g_1^r
+//C/blind = g^m
+//穷举得到m
+pub fn force_open_message() ->BigInt{
+
+    let m = BigInt::from(0);
+    return m;
 }
 
 #[cfg(test)]
