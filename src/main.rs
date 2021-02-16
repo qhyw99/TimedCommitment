@@ -22,26 +22,33 @@ type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
 
 fn main() {
     //Init
-    let msg = BigInt::from("My choice is true!".as_ref());
+    let msg_0 = BigInt::from("My choice is false!".as_ref());
+    let msg_1 = BigInt::from("My choice is true!".as_ref());
+
     let mtl = MasterTl::generate_master_timeline_trusted();
     //let mtl_to_ref = mtl.clone();
 
     //Commit
     let (mtl_p, mtl_s) = generate_mirror_timeline(mtl.clone());
-    let commit = commit_message(&msg, &mtl_s, &mtl_p);
+    let commit = commit_message(&msg_1, &mtl_s, &mtl_p);
 
     //Proof
     let statement = Statement::new(mtl_p, commit);
-    let statement_to_transfer = statement.clone();
-    let secret = Secret::new(mtl_s, RSAGroup::from(msg));
-    let proofs = proof(mtl.clone(), &statement, secret);
+    let secret = Secret::new(mtl_s, RSAGroup::from(&msg_1));
+    let proofs = proof(mtl.clone(), &statement, &secret);
 
     //Verify
-    let status = verify(mtl.clone(), &statement_to_transfer, proofs);
+    let status = verify(mtl.clone(), &statement, proofs);
 
+    let message_commitment = statement.get_message_commitment();
+    let rk_0 = statement.get_rk0();
+    let s = secret.as_ref(); //m r
     //Force open
     if status {
-
+        let b = force_open_message(&msg_0, &msg_1, message_commitment, rk_0, s.1.clone());
+        assert_eq!(b, 1);
     }
     //Open
+    let open_status = open_message(&statement, s.0.as_ref(), s.1.as_ref());
+    println!("{:?}", open_status);
 }

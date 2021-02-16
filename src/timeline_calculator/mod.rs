@@ -2,8 +2,11 @@ use super::*;
 use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use curv::cryptographic_primitives::commitments::traits::Commitment;
 use std::borrow::Borrow;
+use curv::elliptic::curves::traits::ECPoint;
+
 pub mod salt_hash;
-const k: u32 = 50;
+
+const k: u32 = 30;
 
 #[derive(Clone)]
 pub struct MasterTl {
@@ -43,6 +46,7 @@ impl MirrorTlPublic {
     }
 }
 
+#[derive(Clone)]
 pub struct MirrorTlSecret {
     a: ZPhi,
     r: RSAGroup,
@@ -118,24 +122,46 @@ pub fn commit_message(message: &BigInt, blind: &MirrorTlSecret, public: &MirrorT
          pedersen_commit(blind.r_aux.as_ref(), &one));
     return four_element_tuple;
 }
+
 //m r
 //Verify
 //C = g^m * g_1^r
 //&&
 //b = g^r
-pub fn open_message() -> bool{
-
-    let status = true;
+pub fn open_message(statement: &Statement, message: &BigInt, blind: &BigInt) -> bool {
+    let state_tuple = statement.as_ref();
+    let C = pedersen_commit(message, blind);
+    let b = pedersen_commit(blind, &BigInt::zero());
+    let status = (&C == state_tuple.1 && b.borrow() == state_tuple.3);
     return status;
 }
+
 //r_k0 -> r
 //r -> blind = g_1^r
 //C/blind = g^m
-//穷举得到m
-pub fn force_open_message() ->BigInt{
+//穷举得到m 暂时考虑两种情况
+pub fn force_open_message(msg_0: &BigInt, msg_1: &BigInt, C: PedersenGroup, mut r_k0: RSAGroup, r_origin: RSAGroup) -> u8 {
+    let msg_scalar_0: PedersenScaler = msg_0.into();
+    let msg_scalar_1: PedersenScaler = msg_1.into();
+    let msg_point_0 = PedersenGroup::generator() * msg_scalar_0;
+    let msg_point_1 = PedersenGroup::generator() * msg_scalar_1;
 
-    let m = BigInt::from(0);
-    return m;
+    let mut steps = 2_u64.pow(k - 1) - 1;
+    while steps > 0 {
+        r_k0 = r_k0.square();
+        steps -= 1;
+    }
+    assert_eq!(r_k0, r_origin);
+    let r = r_k0.as_ref();
+    let r_scalar: PedersenScaler = r.into();
+    let blind_point = PedersenGroup::base_point2() * r_scalar;
+    let message_point = C.sub_point(blind_point.get_element().borrow());
+
+    return match message_point {
+        x if x == msg_point_0 => 0,
+        x if x == msg_point_1 => 1,
+        _ => 2
+    };
 }
 
 #[cfg(test)]

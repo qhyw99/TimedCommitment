@@ -10,3 +10,5 @@ edition = "2018"
 curv = { git = "https://github.com/qhyw99/curv"}
 bulletproof = { git = "https://github.com/qhyw99/bulletproofs"}
 
+[dev-dependencies]
+criterion = "0.2"

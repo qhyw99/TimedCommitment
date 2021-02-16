@@ -10,7 +10,7 @@ use std::ops::Div;
 
 #[derive(Clone)]
 pub struct Statement {
-    mtl: MirrorTlPublic,
+    mtl: timeline_calculator::MirrorTlPublic,
     C: PedersenGroup,
     B: PedersenGroup,
     b: PedersenGroup,
@@ -31,16 +31,32 @@ impl Statement {
             b_aux: four_element_tuple.3,
         };
     }
+    pub fn as_ref(&self) -> (&timeline_calculator::MirrorTlPublic, &PedersenGroup, &PedersenGroup, &PedersenGroup, &PedersenGroup)
+    {
+        return (&self.mtl, &self.C, &self.B, &self.b, &self.b_aux);
+    }
+    pub fn get_message_commitment(&self) -> PedersenGroup {
+        return self.C.clone();
+    }
+    pub fn get_blind_commitment(&self) -> PedersenGroup{
+        return self.b.clone();
+    }
+    pub fn get_rk0(&self) -> RSAGroup{
+        return self.mtl.r_k0.clone();
+    }
 }
-
+#[derive(Clone)]
 pub struct Secret {
-    mtl: MirrorTlSecret,
+    mtl: timeline_calculator::MirrorTlSecret,
     m: RSAGroup,
 }
 
 impl Secret {
     pub fn new(mtl: MirrorTlSecret, m: RSAGroup) -> Self {
         return Secret { mtl, m };
+    }
+    pub fn as_ref(&self) -> (&RSAGroup, &RSAGroup) {
+        return (&self.m, &self.mtl.as_ref().1);
     }
 }
 
@@ -65,7 +81,7 @@ pub struct Proofs {
     c: CommitmentEqProof,
 }
 
-pub fn proof(master_tl: MasterTl, state: &Statement, secret: Secret) -> Proofs {
+pub fn proof(master_tl: MasterTl, state: &Statement, secret: &Secret) -> Proofs {
     let mtl: (&ZPhi, &RSAGroup, &RSAGroup) = secret.mtl.as_ref();
     let r = mtl.1.as_ref();
     let r_aux = mtl.2.as_ref();
@@ -310,6 +326,7 @@ pub fn verify(master_tl: MasterTl, state: &Statement, proofs: Proofs) -> bool {
 
     return final_status;
 }
+
 pub fn generate_integer_group_from_rsa_group(vec_int: Vec<&BigInt>) -> Vec<IntegerGroup> {
     let vec_group: Vec<IntegerGroup> = vec_int.into_iter().map(|x| {
         let i: IntegerGroup = x.into();
