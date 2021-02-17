@@ -1,3 +1,4 @@
+#![allow(non_snake_case)]
 use super::*;
 use curv::cryptographic_primitives::commitments::pedersen_commitment::PedersenCommitment;
 use curv::cryptographic_primitives::commitments::traits::Commitment;
@@ -6,9 +7,12 @@ use curv::elliptic::curves::traits::ECPoint;
 
 pub mod salt_hash;
 
-static K: u32 = 30;
+static mut K: u32 = 30;
 
-//pub set_system_parameter()
+pub unsafe fn set_system_parameter(new_k: u32) {
+    K = new_k;
+}
+
 #[derive(Clone)]
 pub struct MasterTl {
     pub generator: RSAGroup,
@@ -69,10 +73,15 @@ impl MasterTl {
         let generator = Zqf::from(g.clone());
 
         let base = Zqf::from(&BigInt::from(2));
-        let exp0 = BigInt::from(2_u64.pow(K - 1));
-        let exp1 = BigInt::from(2_u64.pow(K));
-        let exp1_0 = BigInt::from(2_u64.pow(K) - 2);
-        let exp1_1 = BigInt::from(2_u64.pow(K) - 1);
+        let (exp_u_0, exp_u_1) = unsafe {
+            (2_u64.pow(K - 1), 2_u64.pow(K))
+        };
+
+        let exp0 = BigInt::from(exp_u_0);
+        let exp1 = BigInt::from(exp_u_1);
+        let exp1_0 = BigInt::from(exp_u_1 - 2);
+        let exp1_1 = BigInt::from(exp_u_1 - 1);
+
         let a_0 = base.pow_mod_phi(&exp0);
         let a_1 = base.pow_mod_phi(&exp1);
         let a_1_0 = base.pow_mod_phi(&exp1_0);
@@ -133,7 +142,7 @@ pub fn open_message(statement: &Statement, message: &BigInt, blind: &BigInt) -> 
     let state_tuple = statement.as_ref();
     let C = pedersen_commit(message, blind);
     let b = pedersen_commit(blind, &BigInt::zero());
-    let status = (&C == state_tuple.1 && b.borrow() == state_tuple.3);
+    let status = &C == state_tuple.1 && b.borrow() == state_tuple.3;
     return status;
 }
 
@@ -146,8 +155,9 @@ pub fn force_open_message(msg_0: &BigInt, msg_1: &BigInt, C: PedersenGroup, mut 
     let msg_scalar_1: PedersenScaler = msg_1.into();
     let msg_point_0 = PedersenGroup::generator() * msg_scalar_0;
     let msg_point_1 = PedersenGroup::generator() * msg_scalar_1;
-
-    let mut steps = 2_u64.pow(K - 1) - 1;
+    let mut steps = unsafe {
+        2_u64.pow(K - 1) - 1
+    };
     while steps > 0 {
         r_k0 = r_k0.square();
         steps -= 1;

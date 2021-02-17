@@ -1,24 +1,24 @@
-use curv::*;
-
-pub mod proof_system;
-pub mod timeline_calculator;
-
+#![allow(non_snake_case)]
 extern crate curv;
 extern crate bulletproof;
 
+pub use curv::*;
 use curv::elliptic::curves::rsa_group::*;
 use curv::elliptic::curves::curve_ristretto::*;
 use crate::timeline_calculator::*;
 use crate::proof_system::{Statement, proof, verify, Secret};
 
-type RSAGroup = Zqf;
+pub mod proof_system;
+pub mod timeline_calculator;
+
+pub type RSAGroup = Zqf;
 type ZPhi = Zqf;
 //群的阶数较小
 type PedersenGroup = RistrettoCurvPoint;
 type PedersenScaler = RistrettoScalar;
 // //群阶数较大
 type IntegerGroup = curv::elliptic::curves::integer_group::Zqg;
-type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
+//type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
 
 fn main() {
     //Init

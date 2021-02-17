@@ -1,10 +1,12 @@
+#![allow(non_snake_case)]
+
 use crate::*;
-use crate::timeline_calculator::*;
-use curv::cryptographic_primitives::proofs::{sigma_correct_homomorphic_elgamal_enc, sigma_ec_ddh, ProofError};
+//use crate::timeline_calculator::*;
+use curv::cryptographic_primitives::proofs::{ProofError};
 use curv::cryptographic_primitives::proofs::sigma_ec_ddh::{ECDDHProof, ECDDHWitness, ECDDHStatement};
 use curv::cryptographic_primitives::proofs::sigma_correct_homomorphic_elgamal_enc::{HomoELGamalProof, HomoElGamalStatement, HomoElGamalWitness};
 use bulletproof::proofs::range_proof_wip::*;
-use curv::elliptic::curves::traits::{ECPoint, ECScalar};
+use curv::elliptic::curves::traits::{ECPoint};
 use std::borrow::Borrow;
 use std::ops::Div;
 
@@ -38,13 +40,14 @@ impl Statement {
     pub fn get_message_commitment(&self) -> PedersenGroup {
         return self.C.clone();
     }
-    pub fn get_blind_commitment(&self) -> PedersenGroup{
+    pub fn get_blind_commitment(&self) -> PedersenGroup {
         return self.b.clone();
     }
-    pub fn get_rk0(&self) -> RSAGroup{
+    pub fn get_rk0(&self) -> RSAGroup {
         return self.mtl.r_k0.clone();
     }
 }
+
 #[derive(Clone)]
 pub struct Secret {
     mtl: timeline_calculator::MirrorTlSecret,
@@ -107,7 +110,7 @@ pub fn proof(master_tl: MasterTl, state: &Statement, secret: &Secret) -> Proofs 
     let mut group_iter_0 = generate_integer_group_from_rsa_group(vec_int_0).into_iter();
     let mut group_iter_1 = generate_integer_group_from_rsa_group(vec_int_1).into_iter();
 
-    let m_eq_0: ECDDHProof<IntegerGroup> = sigma_ec_ddh::ECDDHProof::prove(
+    let m_eq_0: ECDDHProof<IntegerGroup> = ECDDHProof::prove(
         &ECDDHWitness {
             x: a.into()
         },
@@ -119,7 +122,7 @@ pub fn proof(master_tl: MasterTl, state: &Statement, secret: &Secret) -> Proofs 
         },
     );
     //witness: a Statement:m_0 r_k0 m_1 r_k1
-    let m_eq_1: ECDDHProof<IntegerGroup> = sigma_ec_ddh::ECDDHProof::prove(
+    let m_eq_1: ECDDHProof<IntegerGroup> = ECDDHProof::prove(
         &ECDDHWitness {
             x: a.into()
         },
@@ -299,14 +302,14 @@ pub fn verify(master_tl: MasterTl, state: &Statement, proofs: Proofs) -> bool {
     let m_g = generator * m_f;
 
     let mut v_commit: Vec<PedersenGroup> = vec![];
-    v_commit.push((&u_l_g - &m_g + &state.b)); //(u_l)g + b - Mg
+    v_commit.push(&u_l_g - &m_g + &state.b); //(u_l)g + b - Mg
     v_commit.push(state.b.clone()); //b
-    v_commit.push((&u_l_g - &m_g + &state.b_aux)); //(u_l)g + b_aux - Mg
+    v_commit.push(&u_l_g - &m_g + &state.b_aux); //(u_l)g + b_aux - Mg
     v_commit.push(state.b_aux.clone()); //b_aux
 
     let result2_1 =
         proofs.u.p_range.0.verify(
-            proofs.u.p_range.1, v_commit.as_slice()).map_err(|e| {
+            proofs.u.p_range.1, v_commit.as_slice()).map_err(|_| {
             ProofError
         });
 
@@ -320,7 +323,7 @@ pub fn verify(master_tl: MasterTl, state: &Statement, proofs: Proofs) -> bool {
 
     let result_vec = vec![result1_0, result1_1, result2_0_0, result2_0_1, result2_1, result3];
     let final_status = result_vec.into_iter().fold(true, |acc, x| {
-        println!("{:?}", x);
+        //println!("{:?}", x);
         acc && x.is_ok()
     });
 
