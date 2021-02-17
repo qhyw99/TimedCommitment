@@ -6,8 +6,9 @@ use curv::elliptic::curves::traits::ECPoint;
 
 pub mod salt_hash;
 
-const k: u32 = 30;
+static K: u32 = 30;
 
+//pub set_system_parameter()
 #[derive(Clone)]
 pub struct MasterTl {
     pub generator: RSAGroup,
@@ -68,10 +69,10 @@ impl MasterTl {
         let generator = Zqf::from(g.clone());
 
         let base = Zqf::from(&BigInt::from(2));
-        let exp0 = BigInt::from(2_u64.pow(k - 1));
-        let exp1 = BigInt::from(2_u64.pow(k));
-        let exp1_0 = BigInt::from(2_u64.pow(k) - 2);
-        let exp1_1 = BigInt::from(2_u64.pow(k) - 1);
+        let exp0 = BigInt::from(2_u64.pow(K - 1));
+        let exp1 = BigInt::from(2_u64.pow(K));
+        let exp1_0 = BigInt::from(2_u64.pow(K) - 2);
+        let exp1_1 = BigInt::from(2_u64.pow(K) - 1);
         let a_0 = base.pow_mod_phi(&exp0);
         let a_1 = base.pow_mod_phi(&exp1);
         let a_1_0 = base.pow_mod_phi(&exp1_0);
@@ -146,7 +147,7 @@ pub fn force_open_message(msg_0: &BigInt, msg_1: &BigInt, C: PedersenGroup, mut 
     let msg_point_0 = PedersenGroup::generator() * msg_scalar_0;
     let msg_point_1 = PedersenGroup::generator() * msg_scalar_1;
 
-    let mut steps = 2_u64.pow(k - 1) - 1;
+    let mut steps = 2_u64.pow(K - 1) - 1;
     while steps > 0 {
         r_k0 = r_k0.square();
         steps -= 1;
