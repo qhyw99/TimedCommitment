@@ -349,7 +349,7 @@ dependencies = [
 [[package]]
 name = "curv"
 version = "0.3.3"
-source = "git+https://github.com/qhyw99/curv#f1adc7f3dadcdc57166892d0359a8ab3bc4675c4"
+source = "git+https://github.com/qhyw99/curv#8763c01d5e43a2db4e9bf7fde8a25a84e5e48a0d"
 dependencies = [
  "blake2b_simd",
  "bls12_381",

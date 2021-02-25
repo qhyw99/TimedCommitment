@@ -16,8 +16,7 @@ type ZPhi = Zqf;
 //群的阶数较小
 type PedersenGroup = RistrettoCurvPoint;
 type PedersenScaler = RistrettoScalar;
-// //群阶数较大
-type IntegerGroup = curv::elliptic::curves::integer_group::Zqg;
+type IntegerGroup = curv::elliptic::curves::rsa_group_wrapper::Zqg;
 //type IntegerScaler = curv::elliptic::curves::integer_group::Zqf;
 
 fn main() {
