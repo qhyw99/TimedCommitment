@@ -119,7 +119,7 @@ pub fn generate_mirror_timeline(mtl: MasterTl) -> (MirrorTlPublic, MirrorTlSecre
     });
 }
 
-fn pedersen_commit(g_exp: &BigInt, h_exp: &BigInt) -> PedersenGroup {
+pub fn pedersen_commit(g_exp: &BigInt, h_exp: &BigInt) -> PedersenGroup {
     return PedersenCommitment::create_commitment_with_user_defined_randomness(g_exp, h_exp);
 }
 

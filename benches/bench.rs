@@ -12,7 +12,7 @@ lazy_static::lazy_static! {
    pub static ref msg_1:BigInt = {
    BigInt::from("My choice is true!".as_ref())
    };
-   pub static ref SYSTEM_PARAMETER: [usize; 2] = [10, 20];
+   pub static ref SYSTEM_PARAMETER: [usize; 8] = [10, 20, 30, 35, 37, 38, 39, 40];
    //, 30, 35, 37, 40
 }
 
@@ -150,6 +150,7 @@ mod commit_reveal {
     use criterion::Criterion;
     use super::*;
     use timeline_calculator::salt_hash;
+    use timeline_calculator::pedersen_commit;
     use TimedCommitment::arithmetic::traits::Samplable;
 
     pub fn bench_commit_in_pedersen_group(c: &mut Criterion) {
@@ -187,9 +188,9 @@ mod commit_reveal {
                 let secret = Secret::new(mtl_s, RSAGroup::from(msg_1.clone()));
 
                 let s = secret.as_ref(); //m r
+                let C = statement.as_ref().1;
                 b.iter(|| {
-                    let open_status = open_message(&statement, s.0.as_ref(), s.1.as_ref());
-                    assert!(open_status);
+                    assert_eq!(C, &pedersen_commit(s.0.as_ref(), s.1.as_ref()));
                 })
             },
             &*SYSTEM_PARAMETER,
@@ -200,7 +201,7 @@ mod commit_reveal {
         let label = format!("Information node: commit-hash");
         c.bench_function(&label, |b| {
             b.iter(|| {
-                let r = BigInt::sample(256);
+                let r = BigInt::sample(512);
                 let commit_hash = salt_hash::commit_message(&msg_1, &r);
             });
         });
@@ -209,7 +210,7 @@ mod commit_reveal {
     pub fn bench_reveal_in_salt_hash(c: &mut Criterion) {
         let label = format!("Information node: reveal-hash");
         c.bench_function(&label, |b| {
-            let r = BigInt::sample(256);
+            let r = BigInt::sample(512);
             let commit_hash = salt_hash::commit_message(&msg_1, &r);
             b.iter(|| {
                 let status = salt_hash::reveal_message(&msg_1, &r, commit_hash.clone());
@@ -229,7 +230,7 @@ mod commit_reveal {
     );
 }
 criterion_main!(
-    proof_verify::proof_verify,
-    force_open::force_open,
+    //proof_verify::proof_verify,
+    //force_open::force_open,
     commit_reveal::commit_reveal
 );
